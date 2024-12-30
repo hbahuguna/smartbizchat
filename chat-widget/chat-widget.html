@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BizBooster AI Chat</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #102052;
+      --primary-hover: #1a2f6e;
+      --text-color: #fff;
+      --text-dark: #333;
+      --bg-color: #ffffff;
+      --shadow-color: rgba(16, 32, 82, 0.1);
+      --transition-speed: 0.3s;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    /* Chat Container */
+    #chat-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      height: 500px;
+      background-color: var(--bg-color);
+      border-radius: 15px;
+      box-shadow: 0 5px 25px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(120%);
+      opacity: 0;
+      transition: transform var(--transition-speed), opacity var(--transition-speed);
+      z-index: 1000;
+    }
+
+    #chat-container.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Chat Header */
+    #chat-header {
+      background-color: var(--primary-color);
+      color: var(--text-color); 
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    #collapse-button {
+      background: none;
+      border: none;
+      color: var(--text-color); 
+      cursor: pointer;
+      padding: 5px;
+      transition: transform var(--transition-speed);
+    }
+
+    #collapse-button:hover {
+      transform: scale(1.1);
+    }
+
+    /* Chat Messages */
+    #chat-messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      margin: 10px 0;
+      padding: 10px 15px;
+      border-radius: 15px;
+      max-width: 80%;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-in;
+      line-height: 1.4;
+    }
+
+    .message.user {
+      margin-left: auto;
+      background-color: var(--primary-color);
+      color: var(--text-color);
+      border-bottom-right-radius: 5px;
+    }
+
+    .message.bot {
+      margin-right: auto;
+      background-color: #e9ecef;
+      color: var(--text-dark);
+      border-bottom-left-radius: 5px;
+      border: 1px solid rgba(16, 32, 82, 0.1);
+    }
+
+    /* Input Container */
+    #chat-input-container {
+      display: flex;
+      padding: 15px;
+      background-color: var(--bg-color);
+      border-top: 1px solid #dee2e6;
+    }
+
+    #chat-input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #dee2e6;
+      border-radius: 25px;
+      resize: none;
+      font-size: 14px;
+      transition: border-color var(--transition-speed);
+      margin-right: 10px;
+    }
+
+    #chat-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    #send-button {
+      background-color: var(--primary-color);
+      color: var(--text-color); 
+      border: none;
+      padding: 10px 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color var(--transition-speed), transform var(--transition-speed);
+    }
+
+    #send-button:hover {
+      background-color: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    #send-button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    /* Floating Action Button */
+    #chat-fab {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background-color: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--shadow-color);
+      transition: transform var(--transition-speed), background-color var(--transition-speed);
+      z-index: 999;
+    }
+
+    #chat-fab:hover {
+      transform: scale(1.1);
+      background-color: var(--primary-hover);
+    }
+
+    #chat-fab i {
+      color: var(--text-color); 
+      font-size: 24px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .typing-indicator {
+      color: var(--text-dark);
+      font-style: italic;
+      margin: 10px 0;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    /* Scrollbar Styling */
+    #chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #chat-messages::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating Action Button -->
+  <div id="chat-fab">
+    <i class="fas fa-comments"></i>
+  </div>
+
+  <!-- Chat Interface -->
+  <div id="chat-container">
+    <div id="chat-header">
+      <span>BizBooster AI Chat</span>
+      <button id="collapse-button">
+        <i class="fas fa-chevron-down"></i>
+      </button>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-container">
+      <textarea id="chat-input" placeholder="Type your message here..." rows="1"></textarea>
+      <button id="send-button">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const backendURL = "https://167.88.43.209/api/chat"; 
+    const femaleNames = ["Sophia", "Emma", "Olivia", "Ava", "Isabella", "Mia", "Charlotte", "Amelia", "Evelyn", "Harper"];
+    let agentName = femaleNames[Math.floor(Math.random() * femaleNames.length)];
+    let chatHistory = [
+      `You are a customer support chatbot named ${agentName}. Answer like you are talking to a customer who does not know much.`
+    ];
+
+    let typingTimeout;
+    const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Chat visibility state management
+    const chatContainer = document.getElementById("chat-container");
+    const chatFab = document.getElementById("chat-fab");
+    const collapseButton = document.getElementById("collapse-button");
+
+    // Load chat state from session storage
+    const isChatVisible = sessionStorage.getItem("chatVisible") === "true";
+    if (isChatVisible) {
+      chatContainer.classList.add("visible");
+      chatFab.style.display = "none";
+    }
+
+    // Event listeners for expand/collapse
+    chatFab.addEventListener("click", () => {
+      chatContainer.classList.add("visible");
+      chatFab.style.display = "none";
+      sessionStorage.setItem("chatVisible", "true");
+    });
+
+    collapseButton.addEventListener("click", () => {
+      chatContainer.classList.remove("visible");
+      chatFab.style.display = "flex";
+      sessionStorage.setItem("chatVisible", "false");
+    });
+
+    function addMessage(sender, text) {
+      const messagesContainer = document.getElementById("chat-messages");
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("message", sender);
+      messageElement.textContent = text;
+      messagesContainer.appendChild(messageElement);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function startTypingSimulation() {
+      const messagesContainer = document.getElementById("chat-messages");
+      const typingElement = document.createElement("div");
+      typingElement.classList.add("typing-indicator");
+      typingElement.textContent = `${agentName} is typing...`;
+      messagesContainer.appendChild(typingElement);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      return typingElement;
+    }
+
+    function stopTypingSimulation(typingElement) {
+      if (typingElement && typingElement.parentNode) {
+        typingElement.parentNode.removeChild(typingElement);
+      }
+    }
+
+    async function sendMessage() {
+      const sendButton = document.getElementById("send-button");
+      const userInput = document.getElementById("chat-input").value.trim();
+      if (!userInput) return;
+
+      sendButton.disabled = true;
+      const context = `You are a customer support chatbot named ${agentName}. Answer like you are talking to a customer who does not know much. `;
+      const sendmsg = context + userInput;
+
+      addMessage("user", userInput);
+      document.getElementById("chat-input").value = "";
+      chatHistory.push(`User: ${userInput}`);
+
+      const typingElement = startTypingSimulation();
+
+      try {
+        const botReply = await fetchWithRetry({ chatInput: sendmsg, sessionId: sessionId });
+        stopTypingSimulation(typingElement);
+        addMessage("bot", botReply);
+        chatHistory.push(`Bot (${agentName}): ${botReply}`);
+      } catch (error) {
+        stopTypingSimulation(typingElement);
+        addMessage("bot", "Oops! Something went wrong. Please try again later.");
+        console.error(error);
+      } finally {
+        sendButton.disabled = false;
+      }
+    }
+
+    async function fetchWithRetry(payload, retries = 25) {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch(backendURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+
+          if (data.reply && data.reply.trim()) {
+            return data.reply;
+          }
+
+          console.warn(`Attempt ${attempt}: Empty response, retrying...`);
+        } catch (error) {
+          console.error(`Attempt ${attempt}: Failed to fetch`, error);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+
+      throw new Error("Failed to get a valid response after 5 retries.");
+    }
+
+    document.getElementById("send-button").addEventListener("click", sendMessage);
+
+    document.getElementById("chat-input").addEventListener("keypress", function(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Auto-resize textarea
+    const chatInput = document.getElementById("chat-input");
+    chatInput.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = (this.scrollHeight) + "px";
+    });
+
+    window.onload = function() {
+      addMessage("bot", `Hi, my name is ${agentName}. I'm here to assist you. How can I help you today?`);
+    };
+  </script>
+</body>
+</html>
